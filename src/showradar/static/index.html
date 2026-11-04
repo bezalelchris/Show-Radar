@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Show Radar</title>
+<style>
+  :root {
+    --bg: #f6f4ef; --panel: #ffffff; --ink: #1c1b19; --muted: #6b675f; --line: #e3dfd6;
+    --accent: #d9480f; --accent-ink: #ffffff; --ok: #2b8a3e; --warn: #b35c00; --bad: #c92a2a;
+    --chip: #efebe3; --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141312; --panel: #1d1c1a; --ink: #f1eee8; --muted: #a39e94; --line: #2e2c29;
+      --accent: #ff7a3d; --accent-ink: #141312; --ok: #69db7c; --warn: #ffb347; --bad: #ff8787; --chip: #2a2826;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--muted); margin: 4px 0 0; }
+  .sync { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--panel); color: var(--ink); padding: 7px 12px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  button:disabled { opacity: .55; cursor: progress; }
+  .layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; margin-top: 24px; }
+  .layout > * { min-width: 0; }
+  @media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 520px) { .show { grid-template-columns: 40px 1fr; } .show .follow-btn { grid-column: 2; justify-self: start; } }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  input[type=search], input[type=text] { font: inherit; padding: 8px 12px; border-radius: 8px;
+           border: 1px solid var(--line); background: var(--panel); color: var(--ink); min-width: 0; }
+  input[type=search] { flex: 1 1 240px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .chip { background: var(--chip); border: 1px solid transparent; border-radius: 999px; padding: 4px 11px; font-size: 13px; }
+  .chip[aria-pressed=true] { background: var(--ink); color: var(--bg); }
+  .toggle { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+  .month { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+           color: var(--muted); margin: 22px 0 8px; }
+  .show { display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: start;
+          background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+          padding: 12px 14px; margin-bottom: 8px; }
+  .show.followed { border-color: var(--accent); }
+  .date { text-align: center; line-height: 1.1; }
+  .date .d { font-size: 22px; font-weight: 700; }
+  .date .w { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+  .title { font-weight: 650; margin: 0; overflow-wrap: anywhere; }
+  .title a { text-decoration: none; }
+  .title a:hover { text-decoration: underline; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+  .badge { font-size: 11.5px; padding: 1px 7px; border-radius: 999px; background: var(--chip); }
+  .badge.price { color: var(--ok); font-weight: 600; }
+  .badge.warn { color: var(--warn); } .badge.bad { color: var(--bad); }
+  details { margin-top: 6px; font-size: 13px; color: var(--muted); }
+  details li { margin: 2px 0; }
+  .follow-btn[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  aside section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; margin-bottom: 16px; }
+  aside h2 { font-size: 14px; margin: 0 0 10px; }
+  .follow-form { display: flex; gap: 6px; } .follow-form input { flex: 1; }
+  .follows { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .follows .chip button { border: 0; background: none; padding: 0 0 0 6px; color: var(--muted); }
+  .alert { font-size: 13px; padding: 7px 0; border-top: 1px solid var(--line); }
+  .alert:first-child { border-top: 0; }
+  .alert time { display: block; color: var(--muted); font-size: 11.5px; }
+  .empty, .error { color: var(--muted); padding: 28px 8px; text-align: center; }
+  .error { color: var(--bad); }
+  .count { color: var(--muted); font-size: 13px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Show <span>Radar</span></h1>
+      <p class="sub">Phoenix-area concerts, deduplicated, with alerts for the artists you follow.</p>
+    </div>
+    <div class="sync">
+      <span id="last-sync">Not synced yet</span>
+      <button class="primary" id="sync-btn" type="button">Sync now</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main>
+      <div class="controls">
+        <label class="sr" for="q">Search shows</label>
+        <input id="q" type="search" placeholder="Search artist, show or venue" autocomplete="off">
+        <label class="toggle"><input type="checkbox" id="followed-only"> Following only</label>
+      </div>
+      <div class="chips" id="genres" role="group" aria-label="Filter by genre"></div>
+      <div class="count" id="count" aria-live="polite"></div>
+      <div id="shows"><p class="empty">Loading shows...</p></div>
+    </main>
+
+    <aside>
+      <section>
+        <h2>Artists you follow</h2>
+        <form class="follow-form" id="follow-form">
+          <label class="sr" for="follow-input">Artist name</label>
+          <input id="follow-input" type="text" placeholder="e.g. Tyler, The Creator" maxlength="120" required>
+          <button type="submit">Follow</button>
+        </form>
+        <div class="follows" id="follows"></div>
+      </section>
+      <section>
+        <h2>Alerts</h2>
+        <div id="alerts" aria-live="polite"><p class="count">No alerts yet.</p></div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fold = (s) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^\w&+ ]/g, " ").replace(/\s+/g, " ").trim();
+const state = { q: "", genre: null, followed: false, follows: [] };
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  if (!res.ok) {
+    let msg = `Request failed (${res.status})`;
+    try { msg = (await res.json()).detail || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+function price(s) {
+  if (s.price_max == null) return "";
+  return s.price_min === s.price_max ? `$${s.price_min.toFixed(0)}` : `$${s.price_min.toFixed(0)}-${s.price_max.toFixed(0)}`;
+}
+
+function fmtTime(t) {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+
+function showCard(s) {
+  const d = new Date(s.date + "T12:00:00");
+  const followed = state.follows.some((f) => f.key === fold(s.headliner));
+  const badges = [
+    price(s) && `<span class="badge price">${esc(price(s))}</span>`,
+    s.genre && `<span class="badge">${esc(s.genre)}</span>`,
+    ...s.ages.map((a) => `<span class="badge">${a}+</span>`),
+    s.status === "cancelled" && `<span class="badge bad">Cancelled</span>`,
+    s.status === "rescheduled" && `<span class="badge warn">Rescheduled</span>`,
+    s.status === "offsale" && `<span class="badge">Off sale</span>`,
+    ...s.flags.map((f) => `<span class="badge warn">${esc(f)}</span>`),
+  ].filter(Boolean).join("");
+  const others = s.artists.filter((a) => fold(a) !== fold(s.headliner));
+  const merged = s.listings.length > 1 ? `
+    <details><summary>${s.listings.length} listings merged into this show</summary>
+      <ul>${s.listings.map((l) => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)}</a> (${esc(l.kind)})</li>`).join("")}</ul>
+    </details>` : "";
+  return `
+    <article class="show${s.followed ? " followed" : ""}">
+      <div class="date" aria-hidden="true">
+        <div class="w">${d.toLocaleDateString(undefined, { weekday: "short" })}</div>
+        <div class="d">${d.getDate()}</div>
+      </div>
+      <div>
+        <h3 class="title"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></h3>
+        <div class="meta">${esc(d.toLocaleDateString(undefined, { month: "short", day: "numeric" }))} · ${esc(fmtTime(s.time))} · ${esc(s.venue)}${s.city ? ", " + esc(s.city) : ""}</div>
+        ${others.length ? `<div class="meta">with ${esc(others.join(", "))}</div>` : ""}
+        <div class="badges">${badges}</div>
+        ${merged}
+      </div>
+      <button type="button" class="follow-btn" aria-pressed="${followed}" data-artist="${esc(s.headliner)}"
+        aria-label="${followed ? "Unfollow" : "Follow"} ${esc(s.headliner)}">${followed ? "Following" : "Follow"}</button>
+    </article>`;
+}
+
+function renderShows(data) {
+  const el = $("#shows");
+  $("#count").textContent = `${data.total} upcoming show${data.total === 1 ? "" : "s"}`;
+  if (!data.shows.length) {
+    el.innerHTML = state.followed
+      ? `<p class="empty">No upcoming shows from artists you follow. Follow a few artists, or turn off "Following only".</p>`
+      : `<p class="empty">No shows match. ${data.total === 0 && !state.q ? "Run a sync to pull events from Ticketmaster." : "Try a different search."}</p>`;
+    return;
+  }
+  let html = "", month = "";
+  for (const s of data.shows) {
+    const m = new Date(s.date + "T12:00:00").toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    if (m !== month) { html += `<h2 class="month">${esc(m)}</h2>`; month = m; }
+    html += showCard(s);
+  }
+  el.innerHTML = html;
+}
+
+function renderGenres(genres) {
+  $("#genres").innerHTML = ["All", ...genres].map((g) => {
+    const on = (g === "All" && !state.genre) || g === state.genre;
+    return `<button type="button" class="chip" aria-pressed="${on}" data-genre="${esc(g)}">${esc(g)}</button>`;
+  }).join("");
+}
+
+async function loadShows() {
+  const params = new URLSearchParams();
+  if (state.q) params.set("q", state.q);
+  if (state.genre) params.set("genre", state.genre);
+  if (state.followed) params.set("followed", "true");
+  try {
+    const data = await api(`/api/shows?${params}`);
+    renderGenres(data.genres);
+    renderShows(data);
+  } catch (e) {
+    $("#shows").innerHTML = `<p class="error">Couldn't load shows: ${esc(e.message)}</p>`;
+  }
+}
+
+async function loadFollows() {
+  state.follows = await api("/api/follows");
+  $("#follows").innerHTML = state.follows.length
+    ? state.follows.map((f) => `<span class="chip">${esc(f.display)}<button type="button" data-unfollow="${esc(f.key)}" aria-label="Unfollow ${esc(f.display)}">×</button></span>`).join("")
+    : `<span class="count">Follow artists to get alerts when they announce Phoenix shows.</span>`;
+}
+
+async function loadAlerts() {
+  const alerts = await api("/api/alerts?limit=30");
+  $("#alerts").innerHTML = alerts.length
+    ? alerts.map((a) => `<div class="alert"><time>${esc(new Date(a.detected_at).toLocaleString())}</time>${esc(a.message)}</div>`).join("")
+    : `<p class="count">No alerts yet. New shows, on-sales and status changes for artists you follow appear here after a sync.</p>`;
+}
+
+async function loadStatus() {
+  const s = await api("/api/status");
+  $("#last-sync").textContent = s.last_sync
+    ? `Last sync ${new Date(s.last_sync.synced_at).toLocaleString()} · ${s.last_sync.fetched} listings`
+    : "Not synced yet";
+}
+
+async function refreshAll() {
+  await Promise.all([loadFollows(), loadStatus()]);
+  await Promise.all([loadShows(), loadAlerts()]);
+}
+
+async function toggleFollow(artist, on) {
+  if (on) await api("/api/follows", { method: "POST", body: JSON.stringify({ artist }) });
+  else await api(`/api/follows/${encodeURIComponent(fold(artist))}`, { method: "DELETE" });
+  await loadFollows();
+  await Promise.all([loadShows(), loadAlerts()]);
+}
+
+let timer;
+$("#q").addEventListener("input", (e) => {
+  clearTimeout(timer);
+  timer = setTimeout(() => { state.q = e.target.value.trim(); loadShows(); }, 200);
+});
+$("#followed-only").addEventListener("change", (e) => { state.followed = e.target.checked; loadShows(); });
+$("#genres").addEventListener("click", (e) => {
+  const g = e.target.closest("[data-genre]")?.dataset.genre;
+  if (!g) return;
+  state.genre = g === "All" ? null : g;
+  loadShows();
+});
+$("#shows").addEventListener("click", async (e) => {
+  const btn = e.target.closest(".follow-btn");
+  if (!btn) return;
+  btn.disabled = true;
+  try { await toggleFollow(btn.dataset.artist, btn.getAttribute("aria-pressed") !== "true"); }
+  catch (err) { alert(err.message); btn.disabled = false; }
+});
+$("#follows").addEventListener("click", async (e) => {
+  const key = e.target.closest("[data-unfollow]")?.dataset.unfollow;
+  if (!key) return;
+  await api(`/api/follows/${encodeURIComponent(key)}`, { method: "DELETE" });
+  await loadFollows();
+  await Promise.all([loadShows(), loadAlerts()]);
+});
+$("#follow-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const input = $("#follow-input");
+  if (!input.value.trim()) return;
+  try { await toggleFollow(input.value.trim(), true); input.value = ""; }
+  catch (err) { alert(err.message); }
+});
+$("#sync-btn").addEventListener("click", async (e) => {
+  const btn = e.target;
+  btn.disabled = true; btn.textContent = "Syncing...";
+  try {
+    const r = await api("/api/sync", { method: "POST" });
+    btn.textContent = r.changes ? `${r.changes} change${r.changes === 1 ? "" : "s"}` : "Up to date";
+    await refreshAll();
+  } catch (err) {
+    btn.textContent = "Sync failed";
+    $("#last-sync").textContent = err.message;
+  } finally {
+    setTimeout(() => { btn.disabled = false; btn.textContent = "Sync now"; }, 2000);
+  }
+});
+
+refreshAll().catch((e) => { $("#shows").innerHTML = `<p class="error">${esc(e.message)}</p>`; });
+</script>
+</body>
+</html>
