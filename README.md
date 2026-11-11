@@ -1,8 +1,22 @@
-# Show Radar
+<h1 align="center">Show Radar</h1>
 
-**Follow artists. Get alerted when they announce a Phoenix show, when tickets go on sale, and when a show is rescheduled or cancelled.**
+<p align="center">
+  <strong>Follow artists. Get alerted when they announce a Phoenix show, when tickets go on sale, and when a show is rescheduled or cancelled.</strong>
+</p>
 
-![Show Radar web UI](docs/screenshot.png)
+<p align="center">
+  <a href="https://github.com/bezalelchris/Show-Radar/actions/workflows/ci.yml"><img src="https://github.com/bezalelchris/Show-Radar/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite">
+  <img src="https://img.shields.io/badge/dedup%20F1-1.00-2f9e6e?style=flat-square" alt="Dedup F1 1.00">
+  <img src="https://img.shields.io/badge/license-MIT-lightgrey?style=flat-square" alt="MIT license">
+</p>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
+  <img src="docs/screenshot.png" alt="Show Radar web UI">
+</picture>
 
 Concert discovery is noisy. One night at one venue can appear in Ticketmaster's feed three times, as a ticket-only listing, a "ticket + hotel package", and a separate 21+ listing from another ticketing system. Names are cluttered with `*SOLD OUT*`, `- Ages 16+`, and `| Official Ticket + Hotel Packages`. Show Radar syncs the feed, cleans every listing, merges duplicates into one show, and tracks what changes between syncs.
 
